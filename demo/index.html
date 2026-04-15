@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>tightset — Demo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Outfit:wght@100..900&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #111;
+      color: #eee;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    h1 { font-size: 1.5rem; font-weight: 300; margin-bottom: 1.5rem; color: #888; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+      gap: 1.5rem;
+    }
+    .card {
+      background: #1a1a1a;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .card canvas { display: block; width: 100%; height: auto; }
+    .card-label {
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      color: #666;
+      font-family: monospace;
+    }
+    .controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      align-items: end;
+    }
+    .control-group { display: flex; flex-direction: column; gap: 0.25rem; }
+    .control-group label { font-size: 0.7rem; color: #666; text-transform: uppercase; letter-spacing: 0.05em; }
+    input[type="text"], select {
+      background: #222;
+      border: 1px solid #333;
+      color: #eee;
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-family: inherit;
+    }
+    input[type="text"] { width: 320px; }
+    input[type="range"] { width: 120px; accent-color: #fff; }
+    .range-val { font-size: 0.7rem; color: #555; font-family: monospace; }
+    /* DOM mode demo */
+    .dom-demo {
+      background: #0d0d0d;
+      border-radius: 12px;
+      padding: 0;
+      width: 100%;
+      aspect-ratio: 8/5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .dom-demo .tightset-html div {
+      transition: font-size 0.2s ease, font-weight 0.2s ease;
+    }
+  </style>
+</head>
+<body>
+  <h1>tightset</h1>
+
+  <div class="controls">
+    <div class="control-group">
+      <label>Text</label>
+      <input type="text" id="textInput" value="Do All Tattoos Fade The Same?">
+    </div>
+    <div class="control-group">
+      <label>Font</label>
+      <select id="fontSelect">
+        <option value="Inter">Inter</option>
+        <option value="Outfit">Outfit</option>
+        <option value="Space Grotesk">Space Grotesk</option>
+        <option value="system-ui">System UI</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Max Weight</label>
+      <input type="range" id="weightSlider" min="400" max="900" step="100" value="900">
+      <span class="range-val" id="weightVal">900</span>
+    </div>
+    <div class="control-group">
+      <label>Spread</label>
+      <input type="range" id="spreadSlider" min="0" max="600" step="50" value="150">
+      <span class="range-val" id="spreadVal">150</span>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <h1 style="margin-top: 2rem;">DOM / Tailwind mode</h1>
+  <div class="card" style="max-width: 500px;">
+    <div class="dom-demo" id="domTarget"></div>
+    <div class="card-label">renderToDOM — stylable with CSS</div>
+  </div>
+
+  <script type="module">
+    import { fit } from '../dist/index.js'
+    import { render } from '../dist/canvas.js'
+    import { renderToDOM } from '../dist/dom.js'
+
+    const grid = document.getElementById('grid')
+    const textInput = document.getElementById('textInput')
+    const fontSelect = document.getElementById('fontSelect')
+    const weightSlider = document.getElementById('weightSlider')
+    const spreadSlider = document.getElementById('spreadSlider')
+    const weightVal = document.getElementById('weightVal')
+    const spreadVal = document.getElementById('spreadVal')
+    const domTarget = document.getElementById('domTarget')
+
+    const sizes = [
+      { w: 800, h: 500, label: '800 × 500 (landscape)' },
+      { w: 600, h: 600, label: '600 × 600 (square)' },
+      { w: 400, h: 700, label: '400 × 700 (portrait)' },
+      { w: 1200, h: 630, label: '1200 × 630 (OG image)' },
+    ]
+
+    const dpr = window.devicePixelRatio
+
+    // Create canvases
+    const canvases = sizes.map(({ w, h, label }) => {
+      const card = document.createElement('div')
+      card.className = 'card'
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(w * dpr)
+      canvas.height = Math.round(h * dpr)
+      canvas.style.width = '100%'
+      canvas.style.aspectRatio = `${w}/${h}`
+      card.appendChild(canvas)
+      const lbl = document.createElement('div')
+      lbl.className = 'card-label'
+      lbl.textContent = label
+      card.appendChild(lbl)
+      grid.appendChild(card)
+      return { canvas, w, h }
+    })
+
+    function update() {
+      const text = textInput.value
+      const fontFamily = fontSelect.value
+      const maxWeight = parseInt(weightSlider.value)
+      const spread = parseInt(spreadSlider.value)
+      weightVal.textContent = maxWeight
+      spreadVal.textContent = spread
+
+      canvases.forEach(({ canvas, w, h }) => {
+        canvas.width = Math.round(w * dpr)
+        canvas.height = Math.round(h * dpr)
+        const result = fit(text, { width: w, height: h, fontFamily, maxWeight, spread })
+        if (result) {
+          render(canvas, result, { fontFamily, color: '#ffffff', background: '#0d0d0d', dpr })
+        }
+      })
+
+      // DOM mode
+      const domResult = fit(text, { width: 500, height: 312, fontFamily, maxWeight, spread })
+      if (domResult) {
+        renderToDOM(domTarget, domResult, {
+          fontFamily,
+          color: '#ffffff',
+          containerClass: 'tightset-html',
+        })
+      }
+    }
+
+    // Wait for fonts then render
+    document.fonts.ready.then(update)
+    textInput.addEventListener('input', update)
+    fontSelect.addEventListener('change', update)
+    weightSlider.addEventListener('input', update)
+    spreadSlider.addEventListener('input', update)
+  </script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+{
+  "name": "tightset",
+  "version": "0.1.0",
+  "description": "Variable-weight text fitting engine — fill any rectangle with kinetic typography",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./canvas": {
+      "types": "./dist/canvas.d.ts",
+      "import": "./dist/canvas.js"
+    },
+    "./dom": {
+      "types": "./dist/dom.d.ts",
+      "import": "./dist/dom.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js"
+    },
+    "./svelte": {
+      "types": "./dist/svelte/Tightset.svelte.d.ts",
+      "svelte": "./dist/svelte/Tightset.svelte",
+      "import": "./dist/svelte/Tightset.svelte"
+    },
+    "./vue": {
+      "types": "./dist/vue/Tightset.vue.d.ts",
+      "import": "./dist/vue/Tightset.vue"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src",
+    "AGENTS.md",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup && mkdir -p dist/svelte dist/vue && cp src/svelte/Tightset.svelte dist/svelte/ && cp src/vue/Tightset.vue dist/vue/",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.0",
+    "@types/react": "^19.0.0",
+    "react": "^19.0.0",
+    "vue": "^3.5.0",
+    "svelte": "^4.0.0"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "svelte": ">=4",
+    "vue": ">=3"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true },
+    "svelte": { "optional": true },
+    "vue": { "optional": true }
+  },
+  "keywords": [
+    "text-fitting",
+    "typography",
+    "variable-font",
+    "kinetic-typography",
+    "canvas",
+    "react",
+    "svelte",
+    "vue",
+    "tailwind",
+    "social-media",
+    "og-image"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dmoptimal/tightset"
+  }
+}
