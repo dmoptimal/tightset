@@ -107,6 +107,10 @@ const result = fit('Server Side', { width: 800, height: 400 })
 
 ## Demo
 
+**[Live demo → dmoptimal.github.io/tightset](https://dmoptimal.github.io/tightset/)**
+
+Or run locally:
+
 ```bash
 # From the repo root
 npx serve .
