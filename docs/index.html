@@ -77,6 +77,29 @@
       transition: font-size 0.2s ease, font-weight 0.2s ease;
     }
 
+    /* ── Resizable demo ── */
+    .resize-wrapper { position: relative; margin-bottom: 1.5rem; }
+    .resize-box {
+      resize: both; overflow: hidden;
+      width: 600px; height: 400px;
+      min-width: 200px; min-height: 150px;
+      max-width: 100%;
+      background: #0d0d0d;
+      border: 1px solid #1a1a1a;
+      border-radius: 10px;
+      position: relative;
+    }
+    .resize-box canvas { display: block; }
+    .resize-dims {
+      position: absolute; bottom: 8px; right: 12px;
+      font-size: 0.65rem; color: #333;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      pointer-events: none;
+    }
+    .resize-hint {
+      font-size: 0.75rem; color: #333; margin-top: 0.5rem;
+    }
+
     /* ── Docs ── */
     .doc-grid {
       display: grid;
@@ -177,6 +200,17 @@
         <span class="range-val" id="spreadVal">150</span>
       </div>
     </div>
+
+    <!-- Resizable live demo -->
+    <div class="resize-wrapper">
+      <div class="resize-box" id="resizeBox">
+        <canvas id="resizeCanvas"></canvas>
+        <span class="resize-dims" id="resizeDims">600 × 400</span>
+      </div>
+      <div class="resize-hint">↘ Drag the corner to resize</div>
+    </div>
+
+    <h2 style="margin-top: 2rem;">Multiple sizes</h2>
     <div class="grid" id="grid"></div>
   </section>
 
