@@ -9,7 +9,7 @@
   <a href="https://dmoptimal.github.io/tightset/"><strong>Live demo &rarr;</strong></a>
 </p>
 
-Every line stretches to fill the width, with heavier weight on larger lines. Works with any variable-weight font. Ships with React, Svelte, Vue, vanilla Canvas, and DOM/Tailwind renderers.
+Every line stretches to fill the width, with heavier weight on larger lines. Works with any variable-weight font. Ships with **React**, **Svelte**, **Vue**, **Angular**, vanilla Canvas, and DOM/Tailwind renderers.
 
 ## Install
 
@@ -46,6 +46,7 @@ render(document.querySelector('canvas'), result, {
 | `tightset/react` | `<Tightset>` React component |
 | `tightset/svelte` | `<Tightset>` Svelte component |
 | `tightset/vue` | `<Tightset>` Vue component |
+| `tightset/angular` | `<TightsetComponent>` Angular standalone component |
 
 ## React
 
@@ -60,6 +61,63 @@ import { Tightset } from 'tightset/react'
   color="#fff"
   background="#000"
 />
+```
+
+## Svelte
+
+```svelte
+<script>
+  import Tightset from 'tightset/svelte'
+</script>
+
+<Tightset
+  text="Hello World"
+  width={800}
+  height={500}
+  fontFamily="Inter"
+  color="#fff"
+  background="#000"
+/>
+```
+
+## Vue
+
+```vue
+<script setup>
+import Tightset from 'tightset/vue'
+</script>
+
+<template>
+  <Tightset
+    text="Hello World"
+    :width="800"
+    :height="500"
+    fontFamily="Inter"
+    mode="html"
+  />
+</template>
+```
+
+## Angular
+
+```ts
+import { TightsetComponent } from 'tightset/angular'
+
+@Component({
+  standalone: true,
+  imports: [TightsetComponent],
+  template: `
+    <tightset
+      text="Make It Tight"
+      [width]="800"
+      [height]="500"
+      fontFamily="Inter"
+      color="#ffffff"
+      background="#0d0d0d"
+    />
+  `,
+})
+export class MyComponent {}
 ```
 
 ## Tailwind / DOM

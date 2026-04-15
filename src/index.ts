@@ -59,7 +59,12 @@ export interface LineMetrics {
 }
 
 // ── Engine ──
+// The core uses a Canvas 2D context purely for measureText() calls.
+// Results are cached by (text, size, weight, family) to avoid redundant
+// measurement during the brute-force line-break search.
 
+/** Maximum cache entries before oldest are evicted (FIFO). */
+const MAX_CACHE = 2000
 const cache = new Map<string, LineMetrics>()
 
 let _ctx: CanvasRenderingContext2D | null = null
@@ -90,6 +95,11 @@ function makeFont(size: number, weight: number, family: string) {
   return `${weight} ${size}px ${family}`
 }
 
+/**
+ * Measure a single line of text at a given size/weight and cache the result.
+ * Cache key is quantised (size to 0.1px, weight to nearest integer) to
+ * balance hit-rate vs accuracy.
+ */
 function measureLine(text: string, fontSize: number, weight: number, family: string): LineMetrics {
   const key = `${text}\t${Math.round(fontSize * 10)}\t${Math.round(weight)}\t${family}`
   const cached = cache.get(key)
@@ -103,10 +113,21 @@ function measureLine(text: string, fontSize: number, weight: number, family: str
     capTop: m.actualBoundingBoxAscent,
     capBottom: m.actualBoundingBoxDescent,
   }
+
+  // Evict oldest entries when the cache exceeds the limit
+  if (cache.size >= MAX_CACHE) {
+    const first = cache.keys().next().value
+    if (first !== undefined) cache.delete(first)
+  }
   cache.set(key, result)
   return result
 }
 
+/**
+ * Compute the font size that makes `text` exactly fill `targetWidth`.
+ * Uses a reference measurement at 100px and scales linearly — this is
+ * accurate because font metrics scale proportionally with size.
+ */
 function fontSizeForWidth(text: string, targetWidth: number, weight: number, family: string): number {
   const REF = 100
   const refM = measureLine(text, REF, weight, family)
@@ -115,7 +136,13 @@ function fontSizeForWidth(text: string, targetWidth: number, weight: number, fam
 }
 
 // ── Line-break generators ──
+// The algorithm tries every possible distribution of words across N lines
+// and picks the one whose total height best fills the available rectangle.
+// For short text (≤12 words) it brute-forces all combinations; for longer
+// text it uses a heuristic that distributes words evenly then tries
+// single-word shifts between adjacent lines.
 
+/** Join words into lines given the number of words per line. */
 function buildLines(words: string[], counts: number[]): string[] {
   const lines: string[] = []
   let idx = 0
@@ -126,6 +153,11 @@ function buildLines(words: string[], counts: number[]): string[] {
   return lines
 }
 
+/**
+ * Exhaustive generator: yields every possible way to split `words` into
+ * `numLines` lines. Used when word count is small (≤12) so the
+ * combinatorial space is manageable.
+ */
 function* wordSplits(words: string[], numLines: number): Generator<string[]> {
   if (numLines === 1) { yield [words.join(' ')]; return }
   const gaps = words.length - 1
@@ -151,6 +183,11 @@ function* wordSplits(words: string[], numLines: number): Generator<string[]> {
   }
 }
 
+/**
+ * Fast heuristic generator for longer text: starts with an even
+ * distribution then yields single-word shifts between adjacent lines.
+ * Produces O(numLines) candidates instead of O(C(n,k)).
+ */
 function* heuristicSplits(words: string[], numLines: number): Generator<string[]> {
   const M = words.length
   const base = Math.floor(M / numLines)
@@ -173,7 +210,11 @@ function* heuristicSplits(words: string[], numLines: number): Generator<string[]
 }
 
 // ── Scoring ──
+// Each candidate split is scored by how well its total text height fills
+// the available rectangle. A score of 1.0 means a perfect fit. Scores
+// above 1.0 (text overflows) are penalised heavily.
 
+/** Score a candidate line split by how close its total height is to the target. */
 function scoreSplit(
   lineTexts: string[],
   targetWidth: number,
@@ -255,7 +296,10 @@ export function fit(text: string, opts: TightsetOptions): FitResult | null {
 
   if (!best) return null
 
-  // Compute weight per line: larger text → heavier weight
+  // ── Weight assignment ──
+  // Map each line's font size to a weight: the largest line gets
+  // maxWeight, the smallest gets (maxWeight - spread), with linear
+  // interpolation for lines in between.
   const minSize = Math.min(...best.sizes)
   const maxSize = Math.max(...best.sizes)
   const sizeRange = maxSize - minSize

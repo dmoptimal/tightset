@@ -9,6 +9,15 @@
 
 import type { FitResult } from './index'
 
+/**
+ * Sanitise a value for use in a CSS style attribute.
+ * Strips characters that could break out of a style declaration
+ * (semicolons, angle brackets, curly braces, quotes, url() calls).
+ */
+function sanitizeCSS(value: string): string {
+  return value.replace(/[;{}<>"'`\\]|url\s*\(/gi, '')
+}
+
 export interface DomRenderOptions {
   /** Font family name (must match what was used in fit()) */
   fontFamily?: string
@@ -66,12 +75,18 @@ export function renderToHTML(result: FitResult, options: DomRenderOptions = {}):
   } = options
 
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  const safeColor = sanitizeCSS(color)
+  const safeFont = sanitizeCSS(fontFamily)
 
   const lines = result.lines.map((line, i) => {
     const classes = [lineClass, lineClassFn?.(i, line)].filter(Boolean).join(' ')
     const classAttr = classes ? ` class="${esc(classes)}"` : ''
     const mt = i > 0 ? `margin-top:${gap}px;` : ''
-    return `<div${classAttr} style="${mt}font-size:${result.sizes[i].toFixed(1)}px;font-weight:${result.weights[i]};font-family:${esc(fontFamily)};color:${esc(color)};line-height:1;text-align:${align};white-space:nowrap;">${esc(line)}</div>`
+    // Use cap-height ratio as line-height so the line box tightly wraps the glyphs,
+    // matching the canvas renderer's metric-based spacing.
+    const m = result.metrics[i]
+    const capRatio = (m.capTop + m.capBottom) / result.sizes[i]
+    return `<div${classAttr} style="${mt}font-size:${result.sizes[i].toFixed(1)}px;font-weight:${result.weights[i]};font-family:${esc(safeFont)};color:${esc(safeColor)};line-height:${capRatio.toFixed(3)};text-align:${align};white-space:nowrap;">${esc(line)}</div>`
   }).join('\n    ')
 
   const containerClassAttr = containerClass ? ` class="${esc(containerClass)}"` : ''
@@ -107,8 +122,59 @@ export function renderToDOM(
   result: FitResult,
   options: DomRenderOptions = {},
 ): HTMLElement {
-  element.innerHTML = renderToHTML(result, options)
-  return element.firstElementChild as HTMLElement
+  const {
+    fontFamily = 'sans-serif',
+    color = '#ffffff',
+    align = 'center',
+    gap = 20,
+    padY = 40,
+    containerClass = '',
+    lineClass = '',
+    lineClassFn,
+  } = options
+
+  const safeColor = sanitizeCSS(color)
+  const safeFont = sanitizeCSS(fontFamily)
+
+  // Reuse existing container if it matches, so CSS transitions animate
+  let container = element.firstElementChild as HTMLElement | null
+  if (!container || container.tagName !== 'DIV' || !container.dataset.tightset) {
+    element.innerHTML = ''
+    container = document.createElement('div')
+    container.dataset.tightset = '1'
+    element.appendChild(container)
+  }
+
+  // Update container styles & class
+  container.style.cssText = `display:flex;flex-direction:column;justify-content:center;align-items:${align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start'};padding:${padY}px 0;height:100%;box-sizing:border-box;`
+  if (containerClass) container.className = containerClass
+
+  // Reuse or create line divs, updating styles in place for transitions
+  const existing = Array.from(container.children) as HTMLElement[]
+  for (let i = 0; i < result.lines.length; i++) {
+    let lineEl = existing[i]
+    if (!lineEl || lineEl.tagName !== 'DIV') {
+      lineEl = document.createElement('div')
+      container.appendChild(lineEl)
+    }
+
+    const m = result.metrics[i]
+    const capRatio = (m.capTop + m.capBottom) / result.sizes[i]
+    const mt = i > 0 ? `margin-top:${gap}px;` : ''
+    lineEl.style.cssText = `${mt}font-size:${result.sizes[i].toFixed(1)}px;font-weight:${result.weights[i]};font-family:${safeFont};color:${safeColor};line-height:${capRatio.toFixed(3)};text-align:${align};white-space:nowrap;`
+
+    const classes = [lineClass, lineClassFn?.(i, result.lines[i])].filter(Boolean).join(' ')
+    lineEl.className = classes
+
+    lineEl.textContent = result.lines[i]
+  }
+
+  // Remove excess line divs if the line count decreased
+  while (container.children.length > result.lines.length) {
+    container.removeChild(container.lastChild!)
+  }
+
+  return container
 }
 
 /**
@@ -138,9 +204,9 @@ export function getLineStyles(
     fontWeight: result.weights[i],
     fontFamily,
     color,
-    lineHeight: 1,
+    lineHeight: ((result.metrics[i].capTop + result.metrics[i].capBottom) / result.sizes[i]).toFixed(3),
     textAlign: align,
-    whiteSpace: 'nowrap',
+    whiteSpace: 'nowrap' as const,
     ...(i > 0 ? { marginTop: `${gap}px` } : {}),
   }))
 }

@@ -4,7 +4,7 @@
  * @license MIT
  */
 
-import { useRef, useEffect, useMemo, type CSSProperties } from 'react'
+import { useRef, useEffect, useMemo, useCallback, type CSSProperties } from 'react'
 import { fit, clearCache, type TightsetOptions, type FitResult } from '../index'
 import { render as renderCanvas } from '../canvas'
 
@@ -89,6 +89,8 @@ export function Tightset({
 }: TightsetProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const dpr = dprProp ?? (typeof window !== 'undefined' ? window.devicePixelRatio : 1)
+  const onFitRef = useRef(onFit)
+  onFitRef.current = onFit
 
   const opts: TightsetOptions = useMemo(() => ({
     width, height, padX, padY, gap,
@@ -101,8 +103,8 @@ export function Tightset({
   }, [text, opts])
 
   useEffect(() => {
-    onFit?.(result)
-  }, [result, onFit])
+    onFitRef.current?.(result)
+  }, [result])
 
   useEffect(() => {
     const canvas = canvasRef.current

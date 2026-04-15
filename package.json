@@ -29,6 +29,10 @@
     "./vue": {
       "types": "./dist/vue/Tightset.vue.d.ts",
       "import": "./dist/vue/Tightset.vue"
+    },
+    "./angular": {
+      "types": "./src/angular/tightset.component.ts",
+      "import": "./src/angular/tightset.component.ts"
     }
   },
   "main": "./dist/index.js",
@@ -57,12 +61,14 @@
   "peerDependencies": {
     "react": ">=18",
     "svelte": ">=4",
-    "vue": ">=3"
+    "vue": ">=3",
+    "@angular/core": ">=16"
   },
   "peerDependenciesMeta": {
     "react": { "optional": true },
     "svelte": { "optional": true },
-    "vue": { "optional": true }
+    "vue": { "optional": true },
+    "@angular/core": { "optional": true }
   },
   "keywords": [
     "text-fitting",
@@ -73,6 +79,7 @@
     "react",
     "svelte",
     "vue",
+    "angular",
     "tailwind",
     "social-media",
     "og-image"

@@ -68,7 +68,10 @@ export function draw(
 
 /**
  * Render tightset text onto a canvas element (convenience wrapper).
- * Clears the canvas, optionally fills background, then draws the fitted text centered.
+ * Clears the canvas, optionally fills background, then draws the fitted text
+ * vertically centred within the padY region.
+ *
+ * Note: resets the canvas transform to account for devicePixelRatio scaling.
  *
  * @example
  * ```ts
