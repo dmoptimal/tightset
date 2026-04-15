@@ -177,6 +177,10 @@
     td:first-child { color: #ddd; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.78rem; }
     td code { background: #151515; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.75rem; color: #888; }
 
+    /* ── Notes / callouts ── */
+    .note { background: #111; border-left: 3px solid #444; padding: 0.75rem 1rem; border-radius: 0 6px 6px 0; font-size: 0.85rem; color: #888; margin-top: 0.75rem; line-height: 1.5; }
+    .note strong { color: #bbb; }
+
     /* ── Footer ── */
     footer { text-align: center; padding: 2rem; color: #333; font-size: 0.75rem; border-top: 1px solid #1a1a1a; margin-top: 2rem; }
     footer a { color: #555; text-decoration: none; }
@@ -359,11 +363,14 @@
   fontFamily: <span class="str">'Inter'</span>,
 })
 
+<span class="cm">await</span> document.fonts.ready  <span class="cm">// wait for fonts before measuring</span>
+
 <span class="fn">render</span>(canvas, result, {
   fontFamily: <span class="str">'Inter'</span>,
   color: <span class="str">'#ffffff'</span>,
   background: <span class="str">'#0d0d0d'</span>,
 })</code></pre>
+    <div class="note"><strong>Font loading:</strong> Canvas mode measures text via the Canvas 2D API, so fonts must be fully loaded before calling <code>fit()</code>. Use <code>await document.fonts.ready</code> or trigger a re-render after fonts load. The framework components use canvas internally — ensure fonts are loaded before they mount.</div>
   </section>
 
   <!-- ── React ── -->
@@ -440,6 +447,7 @@
   <span class="attr">color</span>=<span class="str">"#ffffff"</span>
   <span class="attr">background</span>=<span class="str">"#0d0d0d"</span>
 <span class="op">/&gt;</span></code></pre>
+    <div class="note"><strong>Note:</strong> The Angular component is shipped as TypeScript source. Copy <code>tightset.component.ts</code> into your project from <code>node_modules/tightset/dist/angular/</code> rather than importing from <code>tightset/angular</code> directly, as Angular's AOT compiler cannot process raw .ts files from node_modules.</div>
   </section>
 
   <!-- ── Tailwind / DOM ── -->

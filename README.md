@@ -9,7 +9,7 @@
   <a href="https://dmoptimal.github.io/tightset/"><strong>Live demo &rarr;</strong></a>
 </p>
 
-Every line stretches to fill the width, with heavier weight on larger lines. Works with any variable-weight font. Ships with **React**, **Svelte**, **Vue**, **Angular**, vanilla Canvas, and DOM/Tailwind renderers.
+Every line stretches to fill the width, with heavier weight on larger lines. Works with any variable-weight font. Ships with **React**, **Svelte**, **Vue**, **Angular**, vanilla **Canvas**, and **DOM/Tailwind** renderers.
 
 ## Install
 
@@ -23,6 +23,8 @@ npm install tightset
 import { fit } from 'tightset'
 import { render } from 'tightset/canvas'
 
+await document.fonts.ready // always wait for fonts before canvas rendering
+
 const result = fit('Every Line Fills The Width', {
   width: 800,
   height: 500,
@@ -35,6 +37,8 @@ render(document.querySelector('canvas'), result, {
   background: '#0d0d0d',
 })
 ```
+
+> **Font loading:** Canvas mode measures text via the Canvas 2D API, so the font must be fully loaded before calling `fit()`. Wait for `document.fonts.ready` or use the [CSS Font Loading API](https://developer.mozilla.org/en-US/docs/Web/API/FontFaceSet/ready). The framework components (`tightset/react`, `tightset/vue`, etc.) use canvas internally — ensure your fonts are loaded before they mount, or trigger a re-render once fonts are ready.
 
 ## Packages
 
@@ -100,8 +104,11 @@ import Tightset from 'tightset/vue'
 
 ## Angular
 
+> **Note:** The Angular component is shipped as TypeScript source (not pre-compiled), so it cannot be consumed directly from `node_modules` with AOT compilation. Copy the component into your project from `node_modules/tightset/dist/angular/tightset.component.ts`, or use the source from [src/angular](src/angular/).
+
 ```ts
-import { TightsetComponent } from 'tightset/angular'
+// Copy tightset.component.ts into your project, then:
+import { TightsetComponent } from './tightset.component'
 
 @Component({
   standalone: true,
