@@ -1,10 +1,15 @@
-# tightset
+<p align="center">
+  <img src="docs/logo.svg" width="200" alt="tightset logo">
+</p>
 
-Variable-weight text fitting engine. Fills any rectangle with kinetic typography — every line stretches to fill the width, with heavier weight on larger lines.
+<h1 align="center">tightset</h1>
 
-Works with any variable-weight font. Ships with React, Svelte, Vue, vanilla Canvas, and DOM/Tailwind renderers.
+<p align="center">
+  Variable-weight text fitting engine. Fill any rectangle with kinetic typography.<br>
+  <a href="https://dmoptimal.github.io/tightset/"><strong>Live demo &rarr;</strong></a>
+</p>
 
-![tightset demo](demo/screenshot.png)
+Every line stretches to fill the width, with heavier weight on larger lines. Works with any variable-weight font. Ships with React, Svelte, Vue, vanilla Canvas, and DOM/Tailwind renderers.
 
 ## Install
 
@@ -18,7 +23,7 @@ npm install tightset
 import { fit } from 'tightset'
 import { render } from 'tightset/canvas'
 
-const result = fit('Do All Tattoos Fade The Same?', {
+const result = fit('Every Line Fills The Width', {
   width: 800,
   height: 500,
   fontFamily: 'Inter',
@@ -112,9 +117,8 @@ const result = fit('Server Side', { width: 800, height: 400 })
 Or run locally:
 
 ```bash
-# From the repo root
 npx serve .
-# Open http://localhost:3000/demo/
+# Open http://localhost:3000/docs/
 ```
 
 ## License

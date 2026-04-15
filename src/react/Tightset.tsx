@@ -55,7 +55,7 @@ export interface TightsetProps {
  * function App() {
  *   return (
  *     <Tightset
- *       text="Do All Tattoos Fade The Same?"
+ *       text="Every Line Fills The Width"
  *       width={800}
  *       height={500}
  *       fontFamily="Inter"

@@ -17,7 +17,7 @@ npm install tightset
 ```ts
 import { fit, type FitResult, type TightsetOptions } from 'tightset'
 
-const result = fit('Do All Tattoos Fade The Same?', {
+const result = fit('Every Line Fills The Width', {
   width: 800,      // Required: box width in px
   height: 500,     // Required: box height in px
   fontFamily: 'Inter',  // Default: 'sans-serif'
@@ -116,7 +116,7 @@ const styles = getLineStyles(result, { fontFamily: 'Inter', color: '#fff' })
 import { Tightset } from 'tightset/react'
 
 <Tightset
-  text="Do All Tattoos Fade The Same?"
+  text="Every Line Fills The Width"
   width={800}
   height={500}
   fontFamily="Inter"
