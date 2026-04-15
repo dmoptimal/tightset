@@ -1,0 +1,31 @@
+var I=new Map,C=null;function G(){if(!C)if(typeof document<"u")C=document.createElement("canvas").getContext("2d");else if(typeof globalThis<"u"&&"OffscreenCanvas"in globalThis)C=new OffscreenCanvas(1,1).getContext("2d");else throw new Error("tightset: No canvas available. Call setMeasureContext() first.");return C}function V(t,e,o){return`${e} ${t}px ${o}`}function F(t,e,o,a){let s=`${t}	${Math.round(e*10)}	${Math.round(o)}	${a}`,r=I.get(s);if(r)return r;let n=G();n.font=V(e,o,a);let i=n.measureText(t),l={width:i.width,capTop:i.actualBoundingBoxAscent,capBottom:i.actualBoundingBoxDescent};return I.set(s,l),l}function D(t,e,o,a){let r=F(t,100,o,a);return r.width===0?100:e/r.width*100}function $(t,e){let o=[],a=0;for(let s of e)o.push(t.slice(a,a+s).join(" ")),a+=s;return o}function*N(t,e){if(e===1){yield[t.join(" ")];return}let o=t.length-1,a=e-1;if(a>o)return;function*s(r,n,i){if(n===0){yield i;return}for(let l=r;l<=o-n;l++)yield*s(l+1,n-1,[...i,l])}for(let r of s(0,a,[])){let n=[],i=0;for(let l of r)n.push(t.slice(i,l+1).join(" ")),i=l+1;n.push(t.slice(i).join(" ")),yield n}}function*q(t,e){let o=t.length,a=Math.floor(o/e),s=o%e,r=[];for(let n=0;n<e;n++)r.push(a+(n<s?1:0));yield $(t,r);for(let n=0;n<e-1;n++){if(r[n]>1){let i=[...r];i[n]--,i[n+1]++,yield $(t,i)}if(r[n+1]>1){let i=[...r];i[n]++,i[n+1]--,yield $(t,i)}}}function P(t,e,o,a,s,r){let n=t.map(d=>D(d,e,s,r)),i=t.map((d,M)=>F(d,n[M],s,r)),l=0;for(let d=0;d<i.length;d++)l+=i[d].capTop+i[d].capBottom,d<i.length-1&&(l+=a);let f=l/o,c=f<=1?f:1/f-1;return{lines:t,sizes:n,metrics:i,totalHeight:l,score:c}}function S(t,e){let{width:o,height:a,padX:s=60,padY:r=40,gap:n=20,maxWeight:i=900,spread:l=150,maxLines:f=8,uppercase:c=!0,fontFamily:d="sans-serif"}=e,p=(c?t.trim().toUpperCase():t.trim()).split(/\s+/);if(p.length===0)return null;let g=o-s*2,b=a-r*2;if(g<=0||b<=0)return null;let m=null,E=Math.min(p.length,f);for(let u=1;u<=E;u++){let h=p.length<=12?N(p,u):q(p,u);for(let T of h){let H=P(T,g,b,n,i,d);(!m||H.score>m.score)&&(m=H)}}if(!m)return null;let L=Math.min(...m.sizes),B=Math.max(...m.sizes)-L,v=m.sizes.map(u=>{if(B===0||l===0)return i;let h=(u-L)/B,T=i-l*(1-h);return Math.max(100,Math.min(900,Math.round(T/10)*10))}),z=m.lines.map((u,h)=>D(u,g,v[h],d)),x=m.lines.map((u,h)=>F(u,z[h],v[h],d)),R=0;for(let u=0;u<x.length;u++)R+=x[u].capTop+x[u].capBottom,u<x.length-1&&(R+=n);return{lines:m.lines,sizes:z,weights:v,metrics:x,totalHeight:R}}function X(t,e,o,a,s,r={}){let{fontFamily:n="sans-serif",color:i="#ffffff",align:l="center"}=r;t.fillStyle=i,t.textBaseline="alphabetic",t.textAlign=l;let f=a;for(let c=0;c<e.lines.length;c++){let d=e.metrics[c];t.font=`${e.weights[c]} ${e.sizes[c]}px ${n}`,t.fillText(e.lines[c],o,f+d.capTop),f+=d.capTop+d.capBottom,c<e.lines.length-1&&(f+=s)}}function O(t,e,o={}){let{background:a,gap:s=20,padY:r=40,dpr:n=typeof window<"u"?window.devicePixelRatio:1,...i}=o,l=t.width/n,f=t.height/n,c=t.getContext("2d");c.setTransform(n,0,0,n,0,0),a?(c.fillStyle=a,c.fillRect(0,0,l,f)):c.clearRect(0,0,l,f);let d=r+(f-r*2-e.totalHeight)/2;X(c,e,l/2,d,s,i)}function _(t,e={}){let{fontFamily:o="sans-serif",color:a="#ffffff",align:s="center",gap:r=20,padY:n=40,containerClass:i="",lineClass:l="",lineClassFn:f}=e,c=p=>p.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"),d=t.lines.map((p,g)=>{let b=[l,f?.(g,p)].filter(Boolean).join(" "),m=b?` class="${c(b)}"`:"",E=g>0?`margin-top:${r}px;`:"";return`<div${m} style="${E}font-size:${t.sizes[g].toFixed(1)}px;font-weight:${t.weights[g]};font-family:${c(o)};color:${c(a)};line-height:1;text-align:${s};white-space:nowrap;">${c(p)}</div>`}).join(`
+    `);return`<div${i?` class="${c(i)}"`:""} style="display:flex;flex-direction:column;justify-content:center;align-items:${s==="center"?"center":s==="right"?"flex-end":"flex-start"};padding:${n}px 0;height:100%;box-sizing:border-box;">
+    ${d}
+  </div>`}function Y(t,e,o={}){return t.innerHTML=_(e,o),t.firstElementChild}var U=document.getElementById("grid"),j=document.getElementById("textInput"),k=document.getElementById("fontSelect"),A=document.getElementById("weightSlider"),W=document.getElementById("spreadSlider"),J=document.getElementById("weightVal"),K=document.getElementById("spreadVal"),Q=document.getElementById("domTarget"),Z=[{w:800,h:500,label:"800 \xD7 500 (landscape)"},{w:600,h:600,label:"600 \xD7 600 (square)"},{w:400,h:700,label:"400 \xD7 700 (portrait)"},{w:1200,h:630,label:"1200 \xD7 630 (OG image)"}],y=window.devicePixelRatio,tt=Z.map(({w:t,h:e,label:o})=>{let a=document.createElement("div");a.className="card";let s=document.createElement("canvas");s.width=Math.round(t*y),s.height=Math.round(e*y),s.style.width="100%",s.style.aspectRatio=`${t}/${e}`,a.appendChild(s);let r=document.createElement("div");return r.className="card-label",r.textContent=o,a.appendChild(r),U.appendChild(a),{canvas:s,w:t,h:e}});function w(){let t=j.value,e=k.value,o=parseInt(A.value),a=parseInt(W.value);J.textContent=String(o),K.textContent=String(a),tt.forEach(({canvas:r,w:n,h:i})=>{r.width=Math.round(n*y),r.height=Math.round(i*y);let l=S(t,{width:n,height:i,fontFamily:e,maxWeight:o,spread:a});l&&O(r,l,{fontFamily:e,color:"#ffffff",background:"#0d0d0d",dpr:y})});let s=S(t,{width:500,height:312,fontFamily:e,maxWeight:o,spread:a});s&&Y(Q,s,{fontFamily:e,color:"#ffffff",containerClass:"tightset-html"})}document.fonts.ready.then(w);j.addEventListener("input",w);k.addEventListener("change",w);A.addEventListener("input",w);W.addEventListener("input",w);
+/**
+ * tightset — Variable-weight text fitting engine.
+ *
+ * Fills a W×H rectangle with text, optimally choosing line breaks so every
+ * line stretches to fill the width. Uses variable font weight to create
+ * visual hierarchy: larger lines get heavier weight, smaller lines get lighter.
+ *
+ * Works with any variable-weight font (Geist, Inter, etc.).
+ * Requires a Canvas 2D context for text measurement.
+ *
+ * @license MIT
+ */
+/**
+ * tightset/canvas — Vanilla Canvas 2D drawing helper.
+ *
+ * Renders a FitResult onto any CanvasRenderingContext2D.
+ *
+ * @license MIT
+ */
+/**
+ * tightset/dom — HTML/DOM renderer for Tailwind & CSS styling.
+ *
+ * Instead of drawing to a <canvas>, this outputs plain HTML elements
+ * that can be styled with Tailwind classes, CSS Modules, or any CSS framework.
+ *
+ * @license MIT
+ */

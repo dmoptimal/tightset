@@ -41,6 +41,7 @@
   ],
   "scripts": {
     "build": "tsup && mkdir -p dist/svelte dist/vue && cp src/svelte/Tightset.svelte dist/svelte/ && cp src/vue/Tightset.vue dist/vue/",
+    "build:docs": "tsup --config docs/tsup.config.ts",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build"

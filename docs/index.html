@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>tightset — Variable-weight text fitting</title>
+  <meta name="description" content="Fill any rectangle with kinetic typography. Variable-weight text fitting engine for React, Svelte, Vue, Canvas & Tailwind.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Outfit:wght@100..900&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #0a0a0a;
+      color: #d4d4d4;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Layout ── */
+    .page { max-width: 1100px; margin: 0 auto; padding: 3rem 2rem 4rem; }
+    section { margin-bottom: 3.5rem; }
+    section:last-child { margin-bottom: 0; }
+
+    /* ── Header ── */
+    .hero { text-align: center; margin-bottom: 3rem; padding-bottom: 3rem; border-bottom: 1px solid #1e1e1e; }
+    .hero h1 { font-size: 3rem; font-weight: 200; color: #fff; letter-spacing: -0.02em; margin-bottom: 0.5rem; }
+    .hero p { font-size: 1.1rem; color: #666; max-width: 520px; margin: 0 auto 1.5rem; }
+    .hero-links { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .hero-links a {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.5rem 1.2rem; border-radius: 8px; font-size: 0.85rem;
+      text-decoration: none; transition: background 0.15s;
+    }
+    .btn-primary { background: #fff; color: #000; font-weight: 600; }
+    .btn-primary:hover { background: #ddd; }
+    .btn-secondary { background: #1a1a1a; color: #aaa; border: 1px solid #2a2a2a; }
+    .btn-secondary:hover { background: #222; color: #ccc; }
+
+    /* ── Section headings ── */
+    h2 { font-size: 1.3rem; font-weight: 400; color: #999; margin-bottom: 1rem; letter-spacing: -0.01em; }
+    h3 { font-size: 0.95rem; font-weight: 600; color: #bbb; margin: 1.5rem 0 0.5rem; }
+
+    /* ── Interactive demo ── */
+    .controls {
+      display: flex; gap: 1rem; margin-bottom: 1.5rem;
+      flex-wrap: wrap; align-items: end;
+    }
+    .control-group { display: flex; flex-direction: column; gap: 0.25rem; }
+    .control-group label { font-size: 0.65rem; color: #555; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; }
+    input[type="text"], select {
+      background: #151515; border: 1px solid #2a2a2a; color: #eee;
+      padding: 0.45rem 0.7rem; border-radius: 8px; font-size: 0.85rem; font-family: inherit;
+    }
+    input[type="text"] { width: 320px; }
+    input[type="text"]:focus, select:focus { outline: none; border-color: #444; }
+    input[type="range"] { width: 120px; accent-color: #666; }
+    .range-val { font-size: 0.7rem; color: #444; font-family: 'SF Mono', 'Fira Code', monospace; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 1rem;
+    }
+    .card { background: #111; border-radius: 10px; overflow: hidden; border: 1px solid #1a1a1a; }
+    .card canvas { display: block; width: 100%; height: auto; }
+    .card-label {
+      padding: 0.6rem 0.8rem; font-size: 0.7rem; color: #444;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+
+    .dom-demo {
+      background: #0d0d0d; border-radius: 10px;
+      width: 100%; aspect-ratio: 8/5;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .dom-demo .tightset-html div {
+      transition: font-size 0.2s ease, font-weight 0.2s ease;
+    }
+
+    /* ── Docs ── */
+    .doc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+    }
+    .doc-card {
+      background: #111; border: 1px solid #1a1a1a; border-radius: 10px;
+      padding: 1.25rem; min-height: 0;
+    }
+    .doc-card h3 { margin: 0 0 0.5rem; color: #ddd; font-size: 0.9rem; }
+    .doc-card p { font-size: 0.8rem; color: #666; line-height: 1.5; }
+    .doc-card code { font-size: 0.75rem; }
+
+    /* ── Code blocks ── */
+    pre {
+      background: #0f0f0f; border: 1px solid #1a1a1a; border-radius: 8px;
+      padding: 1rem 1.2rem; overflow-x: auto; margin: 0.75rem 0;
+      font-size: 0.78rem; line-height: 1.7;
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    }
+    code {
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.82rem;
+    }
+    pre code { color: #b0b0b0; }
+    .kw { color: #c792ea; }
+    .str { color: #c3e88d; }
+    .fn { color: #82aaff; }
+    .cm { color: #555; }
+    .num { color: #f78c6c; }
+    .typ { color: #ffcb6b; }
+    .op { color: #89ddff; }
+    .tag { color: #f07178; }
+    .attr { color: #c792ea; }
+
+    /* ── Options table ── */
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin: 0.75rem 0; }
+    th { text-align: left; padding: 0.5rem 0.75rem; color: #666; font-weight: 500; border-bottom: 1px solid #1e1e1e; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    td { padding: 0.4rem 0.75rem; border-bottom: 1px solid #141414; color: #aaa; }
+    td:first-child { color: #ddd; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.78rem; }
+    td code { background: #151515; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.75rem; color: #888; }
+
+    /* ── Footer ── */
+    footer { text-align: center; padding: 2rem; color: #333; font-size: 0.75rem; border-top: 1px solid #1a1a1a; margin-top: 2rem; }
+    footer a { color: #555; text-decoration: none; }
+    footer a:hover { color: #888; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .page { padding: 1.5rem 1rem; }
+      .hero h1 { font-size: 2rem; }
+      input[type="text"] { width: 100%; }
+      .grid { grid-template-columns: 1fr; }
+      .doc-grid { grid-template-columns: 1fr; }
+      pre { font-size: 0.72rem; padding: 0.75rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── Hero ── -->
+  <header class="hero">
+    <h1>tightset</h1>
+    <p>Variable-weight text fitting engine. Fill any rectangle with kinetic typography.</p>
+    <div class="hero-links">
+      <a href="https://github.com/dmoptimal/tightset" class="btn-primary">GitHub</a>
+      <a href="https://www.npmjs.com/package/tightset" class="btn-secondary">npm install tightset</a>
+    </div>
+  </header>
+
+  <!-- ── Interactive demo ── -->
+  <section>
+    <h2>Interactive demo</h2>
+    <div class="controls">
+      <div class="control-group">
+        <label>Text</label>
+        <input type="text" id="textInput" value="Do All Tattoos Fade The Same?">
+      </div>
+      <div class="control-group">
+        <label>Font</label>
+        <select id="fontSelect">
+          <option value="Inter">Inter</option>
+          <option value="Outfit">Outfit</option>
+          <option value="Space Grotesk">Space Grotesk</option>
+          <option value="system-ui">System UI</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Max Weight</label>
+        <input type="range" id="weightSlider" min="400" max="900" step="100" value="900">
+        <span class="range-val" id="weightVal">900</span>
+      </div>
+      <div class="control-group">
+        <label>Spread</label>
+        <input type="range" id="spreadSlider" min="0" max="600" step="50" value="150">
+        <span class="range-val" id="spreadVal">150</span>
+      </div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <!-- ── DOM / Tailwind demo ── -->
+  <section>
+    <h2>DOM / Tailwind mode</h2>
+    <p style="font-size: 0.85rem; color: #555; margin-bottom: 1rem;">Renders as styled <code>&lt;div&gt;</code> elements instead of canvas — apply Tailwind classes, CSS transitions, anything.</p>
+    <div class="card" style="max-width: 500px;">
+      <div class="dom-demo" id="domTarget"></div>
+      <div class="card-label">renderToDOM() — pure HTML output</div>
+    </div>
+  </section>
+
+  <!-- ── What it does ── -->
+  <section>
+    <h2>What it does</h2>
+    <div class="doc-grid">
+      <div class="doc-card">
+        <h3>Fills any rectangle</h3>
+        <p>Give it text and a width × height. It finds the optimal line breaks so every line stretches to fill the width.</p>
+      </div>
+      <div class="doc-card">
+        <h3>Variable font weight</h3>
+        <p>Larger lines get heavier weight, smaller lines get lighter. Creates natural visual hierarchy with a single font.</p>
+      </div>
+      <div class="doc-card">
+        <h3>Framework components</h3>
+        <p>Ships with React, Svelte, and Vue components. Or use the vanilla Canvas/DOM renderers directly.</p>
+      </div>
+      <div class="doc-card">
+        <h3>Tailwind-friendly</h3>
+        <p>DOM renderer outputs plain HTML — add <code>className</code>, Tailwind utilities, CSS transitions, shadows, gradients.</p>
+      </div>
+      <div class="doc-card">
+        <h3>SSR / Node.js</h3>
+        <p>Works server-side with <code>node-canvas</code> or <code>OffscreenCanvas</code>. Generate OG images, thumbnails, PDFs.</p>
+      </div>
+      <div class="doc-card">
+        <h3>Tiny &amp; fast</h3>
+        <p>~6 KB core engine, zero dependencies. Measurement cache for repeat calls. No layout thrashing.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Install ── -->
+  <section>
+    <h2>Install</h2>
+    <pre><code><span class="fn">npm</span> install tightset</code></pre>
+  </section>
+
+  <!-- ── Quick start ── -->
+  <section>
+    <h2>Quick start</h2>
+    <pre><code><span class="kw">import</span> { <span class="fn">fit</span> } <span class="kw">from</span> <span class="str">'tightset'</span>
+<span class="kw">import</span> { <span class="fn">render</span> } <span class="kw">from</span> <span class="str">'tightset/canvas'</span>
+
+<span class="kw">const</span> result = <span class="fn">fit</span>(<span class="str">'Do All Tattoos Fade The Same?'</span>, {
+  width: <span class="num">800</span>,
+  height: <span class="num">500</span>,
+  fontFamily: <span class="str">'Inter'</span>,
+})
+
+<span class="fn">render</span>(canvas, result, {
+  fontFamily: <span class="str">'Inter'</span>,
+  color: <span class="str">'#ffffff'</span>,
+  background: <span class="str">'#0d0d0d'</span>,
+})</code></pre>
+  </section>
+
+  <!-- ── React ── -->
+  <section>
+    <h2>React</h2>
+    <pre><code><span class="kw">import</span> { <span class="typ">Tightset</span> } <span class="kw">from</span> <span class="str">'tightset/react'</span>
+
+<span class="op">&lt;</span><span class="typ">Tightset</span>
+  <span class="attr">text</span>=<span class="str">"Make It Tight"</span>
+  <span class="attr">width</span>={<span class="num">800</span>}
+  <span class="attr">height</span>={<span class="num">500</span>}
+  <span class="attr">fontFamily</span>=<span class="str">"Inter"</span>
+  <span class="attr">color</span>=<span class="str">"#ffffff"</span>
+  <span class="attr">background</span>=<span class="str">"#0d0d0d"</span>
+  <span class="attr">className</span>=<span class="str">"rounded-2xl shadow-xl"</span>
+<span class="op">/&gt;</span></code></pre>
+  </section>
+
+  <!-- ── Svelte ── -->
+  <section>
+    <h2>Svelte</h2>
+    <pre><code><span class="kw">import</span> <span class="typ">Tightset</span> <span class="kw">from</span> <span class="str">'tightset/svelte'</span>
+
+<span class="op">&lt;</span><span class="typ">Tightset</span>
+  <span class="attr">text</span>=<span class="str">"Hello World"</span>
+  <span class="attr">width</span>={<span class="num">800</span>}
+  <span class="attr">height</span>={<span class="num">500</span>}
+  <span class="attr">fontFamily</span>=<span class="str">"Inter"</span>
+  <span class="attr">color</span>=<span class="str">"#ffffff"</span>
+  <span class="attr">background</span>=<span class="str">"#0d0d0d"</span>
+<span class="op">/&gt;</span></code></pre>
+  </section>
+
+  <!-- ── Vue ── -->
+  <section>
+    <h2>Vue</h2>
+    <pre><code><span class="op">&lt;</span><span class="tag">script</span> <span class="attr">setup</span><span class="op">&gt;</span>
+<span class="kw">import</span> <span class="typ">Tightset</span> <span class="kw">from</span> <span class="str">'tightset/vue'</span>
+<span class="op">&lt;/</span><span class="tag">script</span><span class="op">&gt;</span>
+
+<span class="op">&lt;</span><span class="tag">template</span><span class="op">&gt;</span>
+  <span class="op">&lt;</span><span class="typ">Tightset</span>
+    <span class="attr">text</span>=<span class="str">"Hello World"</span>
+    <span class="attr">:width</span>=<span class="str">"800"</span>
+    <span class="attr">:height</span>=<span class="str">"500"</span>
+    <span class="attr">fontFamily</span>=<span class="str">"Inter"</span>
+    <span class="attr">mode</span>=<span class="str">"html"</span>
+  <span class="op">/&gt;</span>
+<span class="op">&lt;/</span><span class="tag">template</span><span class="op">&gt;</span></code></pre>
+  </section>
+
+  <!-- ── Tailwind / DOM ── -->
+  <section>
+    <h2>Tailwind / DOM rendering</h2>
+    <pre><code><span class="kw">import</span> { <span class="fn">fit</span> } <span class="kw">from</span> <span class="str">'tightset'</span>
+<span class="kw">import</span> { <span class="fn">renderToHTML</span>, <span class="fn">getLineStyles</span> } <span class="kw">from</span> <span class="str">'tightset/dom'</span>
+
+<span class="kw">const</span> result = <span class="fn">fit</span>(<span class="str">'Style Me'</span>, { width: <span class="num">800</span>, height: <span class="num">400</span> })
+
+<span class="cm">// Option 1: HTML string with Tailwind classes</span>
+<span class="kw">const</span> html = <span class="fn">renderToHTML</span>(result, {
+  containerClass: <span class="str">'bg-black rounded-2xl'</span>,
+  lineClass: <span class="str">'tracking-tight drop-shadow-lg'</span>,
+})
+
+<span class="cm">// Option 2: Style objects for JSX</span>
+<span class="kw">const</span> styles = <span class="fn">getLineStyles</span>(result, { fontFamily: <span class="str">'Inter'</span> })
+result.lines.<span class="fn">map</span>((line, i) <span class="op">=&gt;</span>
+  <span class="op">&lt;</span><span class="tag">div</span> <span class="attr">style</span>={styles[i]} <span class="attr">className</span>=<span class="str">"drop-shadow-lg"</span><span class="op">&gt;</span>{line}<span class="op">&lt;/</span><span class="tag">div</span><span class="op">&gt;</span>
+)</code></pre>
+  </section>
+
+  <!-- ── Options ── -->
+  <section>
+    <h2>Options</h2>
+    <table>
+      <thead><tr><th>Option</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>width</td><td><code>—</code></td><td>Box width in pixels (required)</td></tr>
+        <tr><td>height</td><td><code>—</code></td><td>Box height in pixels (required)</td></tr>
+        <tr><td>fontFamily</td><td><code>'sans-serif'</code></td><td>Font family — must be loaded</td></tr>
+        <tr><td>padX</td><td><code>60</code></td><td>Horizontal padding</td></tr>
+        <tr><td>padY</td><td><code>40</code></td><td>Vertical padding</td></tr>
+        <tr><td>gap</td><td><code>20</code></td><td>Gap between lines</td></tr>
+        <tr><td>maxWeight</td><td><code>900</code></td><td>Heaviest font weight</td></tr>
+        <tr><td>spread</td><td><code>150</code></td><td>Weight range (heavy − light)</td></tr>
+        <tr><td>maxLines</td><td><code>8</code></td><td>Maximum line count</td></tr>
+        <tr><td>uppercase</td><td><code>true</code></td><td>Uppercase transform</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ── Imports ── -->
+  <section>
+    <h2>Import map</h2>
+    <table>
+      <thead><tr><th>Import</th><th>Contents</th></tr></thead>
+      <tbody>
+        <tr><td>tightset</td><td>Core <code>fit()</code>, <code>clearCache()</code>, <code>setMeasureContext()</code></td></tr>
+        <tr><td>tightset/canvas</td><td><code>draw()</code>, <code>render()</code> for Canvas 2D</td></tr>
+        <tr><td>tightset/dom</td><td><code>renderToHTML()</code>, <code>renderToDOM()</code>, <code>getLineStyles()</code></td></tr>
+        <tr><td>tightset/react</td><td><code>&lt;Tightset&gt;</code> React component</td></tr>
+        <tr><td>tightset/svelte</td><td><code>&lt;Tightset&gt;</code> Svelte component</td></tr>
+        <tr><td>tightset/vue</td><td><code>&lt;Tightset&gt;</code> Vue component</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ── Node / SSR ── -->
+  <section>
+    <h2>Node.js / SSR</h2>
+    <pre><code><span class="kw">import</span> { <span class="fn">createCanvas</span> } <span class="kw">from</span> <span class="str">'canvas'</span>
+<span class="kw">import</span> { <span class="fn">setMeasureContext</span>, <span class="fn">fit</span> } <span class="kw">from</span> <span class="str">'tightset'</span>
+
+<span class="kw">const</span> canvas = <span class="fn">createCanvas</span>(<span class="num">1</span>, <span class="num">1</span>)
+<span class="fn">setMeasureContext</span>(canvas.<span class="fn">getContext</span>(<span class="str">'2d'</span>))
+
+<span class="kw">const</span> result = <span class="fn">fit</span>(<span class="str">'Server Side Text'</span>, {
+  width: <span class="num">1200</span>, height: <span class="num">630</span>, fontFamily: <span class="str">'Inter'</span>
+})</code></pre>
+  </section>
+
+</div>
+
+<footer>
+  MIT — <a href="https://github.com/dmoptimal/tightset">dmoptimal/tightset</a>
+</footer>
+
+<!-- ── Self-contained demo bundle (built by: npm run build:docs) ── -->
+<script type="module" src="tightset-demo.js"></script>
+</body>
+</html>
