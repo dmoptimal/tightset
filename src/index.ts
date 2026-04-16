@@ -59,11 +59,11 @@ export interface LineMetrics {
 }
 
 // ── Engine ──
-// The core uses a Canvas 2D context purely for measureText() calls.
-// Results are cached by (text, size, weight, family) to avoid redundant
-// measurement during the brute-force line-break search.
 
-/** Maximum cache entries before oldest are evicted (FIFO). */
+/** Reference font size used for all pre-measurements. */
+const REF = 100
+
+/** Maximum measurement cache entries before oldest are evicted (FIFO). */
 const MAX_CACHE = 2000
 const cache = new Map<string, LineMetrics>()
 
@@ -97,8 +97,6 @@ function makeFont(size: number, weight: number, family: string) {
 
 /**
  * Measure a single line of text at a given size/weight and cache the result.
- * Cache key is quantised (size to 0.1px, weight to nearest integer) to
- * balance hit-rate vs accuracy.
  */
 function measureLine(text: string, fontSize: number, weight: number, family: string): LineMetrics {
   const key = `${text}\t${Math.round(fontSize * 10)}\t${Math.round(weight)}\t${family}`
@@ -114,7 +112,6 @@ function measureLine(text: string, fontSize: number, weight: number, family: str
     capBottom: m.actualBoundingBoxDescent,
   }
 
-  // Evict oldest entries when the cache exceeds the limit
   if (cache.size >= MAX_CACHE) {
     const first = cache.keys().next().value
     if (first !== undefined) cache.delete(first)
@@ -123,44 +120,114 @@ function measureLine(text: string, fontSize: number, weight: number, family: str
   return result
 }
 
+// ── Prepared text (pretext-inspired prepare/layout split) ──
+// The expensive canvas measureText() calls happen once in prepare().
+// The search loop then uses pure arithmetic over cached reference widths.
+
+interface PreparedWord {
+  text: string
+  /** Width at REF size and the given weight/family */
+  refWidth: number
+  /** capTop at REF size */
+  refCapTop: number
+  /** capBottom at REF size */
+  refCapBottom: number
+}
+
+interface PreparedText {
+  words: PreparedWord[]
+  /** Width of a single space character at REF size */
+  spaceWidth: number
+  /** Weight used for preparation */
+  weight: number
+  /** Font family used for preparation */
+  family: string
+}
+
+/** Cache for prepare() results — keyed by "words|weight|family". */
+const MAX_PREP_CACHE = 50
+const prepCache = new Map<string, PreparedText>()
+
 /**
- * Compute the font size that makes `text` exactly fill `targetWidth`.
- * Uses a reference measurement at 100px and scales linearly — this is
- * accurate because font metrics scale proportionally with size.
+ * Pre-measure all words at REF size. Cached by text+weight+family.
  */
-function fontSizeForWidth(text: string, targetWidth: number, weight: number, family: string): number {
-  const REF = 100
-  const refM = measureLine(text, REF, weight, family)
-  if (refM.width === 0) return REF
-  return (targetWidth / refM.width) * REF
+function prepare(words: string[], weight: number, family: string): PreparedText {
+  const key = `${words.join(' ')}\t${weight}\t${family}`
+  const cached = prepCache.get(key)
+  if (cached) return cached
+
+  const ctx = getCtx()
+  ctx.font = makeFont(REF, weight, family)
+
+  const spaceM = ctx.measureText(' ')
+  const spaceWidth = spaceM.width
+
+  const prepared: PreparedWord[] = []
+  for (const word of words) {
+    const m = ctx.measureText(word)
+    prepared.push({
+      text: word,
+      refWidth: m.width,
+      refCapTop: m.actualBoundingBoxAscent,
+      refCapBottom: m.actualBoundingBoxDescent,
+    })
+  }
+
+  const result = { words: prepared, spaceWidth, weight, family }
+
+  if (prepCache.size >= MAX_PREP_CACHE) {
+    const first = prepCache.keys().next().value
+    if (first !== undefined) prepCache.delete(first)
+  }
+  prepCache.set(key, result)
+  return result
+}
+
+/**
+ * Compute the reference-size width of a line (sum of word widths + space widths).
+ * Pure arithmetic — no canvas calls.
+ */
+function lineRefWidth(prep: PreparedText, startIdx: number, count: number): number {
+  let w = 0
+  for (let i = startIdx; i < startIdx + count; i++) {
+    w += prep.words[i].refWidth
+  }
+  // Add spaces between words
+  if (count > 1) w += prep.spaceWidth * (count - 1)
+  return w
+}
+
+/**
+ * Compute reference-size height metrics for a line (max capTop + max capBottom
+ * across constituent words). Pure arithmetic.
+ */
+function lineRefHeight(prep: PreparedText, startIdx: number, count: number): { capTop: number, capBottom: number } {
+  let capTop = 0, capBottom = 0
+  for (let i = startIdx; i < startIdx + count; i++) {
+    if (prep.words[i].refCapTop > capTop) capTop = prep.words[i].refCapTop
+    if (prep.words[i].refCapBottom > capBottom) capBottom = prep.words[i].refCapBottom
+  }
+  return { capTop, capBottom }
 }
 
 // ── Line-break generators ──
-// The algorithm tries every possible distribution of words across N lines
-// and picks the one whose total height best fills the available rectangle.
-// For short text (≤12 words) it brute-forces all combinations; for longer
-// text it uses a heuristic that distributes words evenly then tries
-// single-word shifts between adjacent lines.
+// Now yield word counts per line instead of joined strings, avoiding
+// string allocation during the search.
 
-/** Join words into lines given the number of words per line. */
-function buildLines(words: string[], counts: number[]): string[] {
-  const lines: string[] = []
-  let idx = 0
-  for (const c of counts) {
-    lines.push(words.slice(idx, idx + c).join(' '))
-    idx += c
-  }
-  return lines
+/** Join words into a line string (only needed for final output). */
+function joinWords(prep: PreparedText, startIdx: number, count: number): string {
+  const parts: string[] = []
+  for (let i = startIdx; i < startIdx + count; i++) parts.push(prep.words[i].text)
+  return parts.join(' ')
 }
 
 /**
- * Exhaustive generator: yields every possible way to split `words` into
- * `numLines` lines. Used when word count is small (≤12) so the
- * combinatorial space is manageable.
+ * Exhaustive generator: yields every way to split N words into numLines groups.
+ * Each yield is an array of word-counts per line.
  */
-function* wordSplits(words: string[], numLines: number): Generator<string[]> {
-  if (numLines === 1) { yield [words.join(' ')]; return }
-  const gaps = words.length - 1
+function* wordCountSplits(numWords: number, numLines: number): Generator<number[]> {
+  if (numLines === 1) { yield [numWords]; return }
+  const gaps = numWords - 1
   const choose = numLines - 1
   if (choose > gaps) return
 
@@ -172,67 +239,80 @@ function* wordSplits(words: string[], numLines: number): Generator<string[]> {
   }
 
   for (const dividers of combos(0, choose, [])) {
-    const lines: string[] = []
+    const counts: number[] = []
     let prev = 0
     for (const d of dividers) {
-      lines.push(words.slice(prev, d + 1).join(' '))
+      counts.push(d + 1 - prev)
       prev = d + 1
     }
-    lines.push(words.slice(prev).join(' '))
-    yield lines
+    counts.push(numWords - prev)
+    yield counts
   }
 }
 
 /**
- * Fast heuristic generator for longer text: starts with an even
- * distribution then yields single-word shifts between adjacent lines.
- * Produces O(numLines) candidates instead of O(C(n,k)).
+ * Heuristic generator for longer text: even distribution + 1/2-word shifts.
  */
-function* heuristicSplits(words: string[], numLines: number): Generator<string[]> {
-  const M = words.length
-  const base = Math.floor(M / numLines)
-  const extra = M % numLines
+function* heuristicCountSplits(numWords: number, numLines: number): Generator<number[]> {
+  const base = Math.floor(numWords / numLines)
+  const extra = numWords % numLines
   const baseCounts: number[] = []
   for (let i = 0; i < numLines; i++) baseCounts.push(base + (i < extra ? 1 : 0))
 
-  yield buildLines(words, baseCounts)
+  yield [...baseCounts]
 
   for (let i = 0; i < numLines - 1; i++) {
     if (baseCounts[i] > 1) {
       const s = [...baseCounts]; s[i]--; s[i + 1]++
-      yield buildLines(words, s)
+      yield s
     }
     if (baseCounts[i + 1] > 1) {
       const s = [...baseCounts]; s[i]++; s[i + 1]--
-      yield buildLines(words, s)
+      yield s
+    }
+  }
+
+  for (let i = 0; i < numLines - 1; i++) {
+    if (baseCounts[i] > 2) {
+      const s = [...baseCounts]; s[i] -= 2; s[i + 1] += 2
+      yield s
+    }
+    if (baseCounts[i + 1] > 2) {
+      const s = [...baseCounts]; s[i] += 2; s[i + 1] -= 2
+      yield s
     }
   }
 }
 
-// ── Scoring ──
-// Each candidate split is scored by how well its total text height fills
-// the available rectangle. A score of 1.0 means a perfect fit. Scores
-// above 1.0 (text overflows) are penalised heavily.
+// ── Scoring (pure arithmetic) ──
 
-/** Score a candidate line split by how close its total height is to the target. */
-function scoreSplit(
-  lineTexts: string[],
+/**
+ * Score a candidate word-count split. Pure arithmetic over pre-measured widths.
+ * Zero canvas calls.
+ */
+function scoreSplitFast(
+  counts: number[],
+  prep: PreparedText,
   targetWidth: number,
   targetHeight: number,
   gap: number,
-  weight: number,
-  family: string,
 ) {
-  const sizes = lineTexts.map(t => fontSizeForWidth(t, targetWidth, weight, family))
-  const metrics = lineTexts.map((t, i) => measureLine(t, sizes[i], weight, family))
+  const sizes: number[] = []
   let totalHeight = 0
-  for (let i = 0; i < metrics.length; i++) {
-    totalHeight += metrics[i].capTop + metrics[i].capBottom
-    if (i < metrics.length - 1) totalHeight += gap
+  let idx = 0
+  for (let i = 0; i < counts.length; i++) {
+    const refW = lineRefWidth(prep, idx, counts[i])
+    if (refW === 0) { sizes.push(REF); idx += counts[i]; continue }
+    const scale = targetWidth / refW
+    sizes.push(scale * REF)
+    const h = lineRefHeight(prep, idx, counts[i])
+    totalHeight += (h.capTop + h.capBottom) * scale
+    if (i < counts.length - 1) totalHeight += gap
+    idx += counts[i]
   }
   const ratio = totalHeight / targetHeight
   const score = ratio <= 1 ? ratio : 1 / ratio - 1
-  return { lines: lineTexts, sizes, metrics, totalHeight, score }
+  return { counts, sizes, totalHeight, score }
 }
 
 // ── Public API ──
@@ -273,6 +353,7 @@ export function fit(text: string, opts: TightsetOptions): FitResult | null {
   } = opts
 
   const processed = uppercase ? text.trim().toUpperCase() : text.trim()
+  if (processed.length === 0) return null
   const words = processed.split(/\s+/)
   if (words.length === 0) return null
 
@@ -280,26 +361,37 @@ export function fit(text: string, opts: TightsetOptions): FitResult | null {
   const availH = height - padY * 2
   if (availW <= 0 || availH <= 0) return null
 
-  let best: ReturnType<typeof scoreSplit> | null = null
+  // ── Prepare: one-time measurement of all words at reference size ──
+  const prep = prepare(words, maxWeight, fontFamily)
+
+  // ── Search: pure arithmetic over pre-measured widths ──
+  let best: ReturnType<typeof scoreSplitFast> | null = null
   const lineLimit = Math.min(words.length, maxLines)
 
+  outer:
   for (let n = 1; n <= lineLimit; n++) {
-    const candidates = words.length <= 12
-      ? wordSplits(words, n)
-      : heuristicSplits(words, n)
+    const candidates = words.length <= 8
+      ? wordCountSplits(words.length, n)
+      : heuristicCountSplits(words.length, n)
 
-    for (const lineTexts of candidates) {
-      const result = scoreSplit(lineTexts, availW, availH, gap, maxWeight, fontFamily)
+    for (const counts of candidates) {
+      const result = scoreSplitFast(counts, prep, availW, availH, gap)
       if (!best || result.score > best.score) best = result
+      if (best.score > 0.98) break outer
     }
   }
 
   if (!best) return null
 
+  // ── Build final line strings ──
+  const lines: string[] = []
+  let idx = 0
+  for (const c of best.counts) {
+    lines.push(joinWords(prep, idx, c))
+    idx += c
+  }
+
   // ── Weight assignment ──
-  // Map each line's font size to a weight: the largest line gets
-  // maxWeight, the smallest gets (maxWeight - spread), with linear
-  // interpolation for lines in between.
   const minSize = Math.min(...best.sizes)
   const maxSize = Math.max(...best.sizes)
   const sizeRange = maxSize - minSize
@@ -310,16 +402,20 @@ export function fit(text: string, opts: TightsetOptions): FitResult | null {
     return Math.max(100, Math.min(900, Math.round(w / 10) * 10))
   })
 
-  // Re-measure with final weights
-  const finalSizes = best.lines.map((t, i) => fontSizeForWidth(t, availW, weights[i], fontFamily))
-  const finalMetrics = best.lines.map((t, i) => measureLine(t, finalSizes[i], weights[i], fontFamily))
+  // Re-measure with final weights (only N measureText calls, where N = line count)
+  const finalSizes = lines.map((t, i) => {
+    const refM = measureLine(t, REF, weights[i], fontFamily)
+    if (refM.width === 0) return REF
+    return (availW / refM.width) * REF
+  })
+  const finalMetrics = lines.map((t, i) => measureLine(t, finalSizes[i], weights[i], fontFamily))
   let totalHeight = 0
   for (let i = 0; i < finalMetrics.length; i++) {
     totalHeight += finalMetrics[i].capTop + finalMetrics[i].capBottom
     if (i < finalMetrics.length - 1) totalHeight += gap
   }
 
-  return { lines: best.lines, sizes: finalSizes, weights, metrics: finalMetrics, totalHeight }
+  return { lines, sizes: finalSizes, weights, metrics: finalMetrics, totalHeight }
 }
 
 /**
@@ -328,4 +424,5 @@ export function fit(text: string, opts: TightsetOptions): FitResult | null {
  */
 export function clearCache() {
   cache.clear()
+  prepCache.clear()
 }

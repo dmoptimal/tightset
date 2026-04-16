@@ -53,6 +53,36 @@
     section { margin-bottom: 3.5rem; }
     section:last-child { margin-bottom: 0; }
 
+    /* ── Hero typer ── */
+    .hero-typer {
+      position: relative;
+      display: block;
+      width: 170px;
+      height: 170px;
+      margin: 0 auto 1.5rem;
+      background: #0d0d0d;
+      border-radius: 12px;
+      border: 1px solid #1a1a1a;
+      overflow: hidden;
+    }
+    .hero-typer canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .typer-cursor {
+      position: absolute;
+      width: 3px;
+      background: #fff;
+      border-radius: 2px;
+      animation: blink 1s step-end infinite;
+      pointer-events: none;
+      transition: top 0.08s, height 0.08s;
+    }
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
     /* ── Header ── */
     .hero { text-align: center; margin-bottom: 3rem; padding-bottom: 3rem; border-bottom: 1px solid #1e1e1e; }
     .hero h1 { font-size: 3rem; font-weight: 200; color: #fff; letter-spacing: -0.02em; margin-bottom: 0.5rem; }
@@ -102,16 +132,26 @@
       background: #0d0d0d; border-radius: 10px;
       width: 100%; aspect-ratio: 8/5;
       display: flex; align-items: center; justify-content: center;
+      contain: strict;
+      will-change: contents;
     }
     .dom-demo .tightset-html div {}
 
     /* ── Resizable demo ── */
-    .resize-wrapper { position: relative; margin-bottom: 1.5rem; }
+    .resize-wrapper {
+      position: relative; margin-bottom: 1.5rem;
+      width: 1200px; height: 450px; max-width: 100%;
+      border: 2px dashed #2a2a2a;
+      border-radius: 12px;
+      background: #111;
+      padding: 4px;
+    }
     .resize-box {
       resize: both; overflow: hidden;
+      contain: strict;
       width: 500px; height: 320px;
       min-width: 200px; min-height: 150px;
-      max-width: 100%;
+      max-width: 100%; max-height: 100%;
       background: #0d0d0d;
       border: 1px solid #1a1a1a;
       border-radius: 10px;
@@ -193,9 +233,7 @@
       100% { background-position: 0% 50%; }
     }
     .animated-gradient {
-      background: linear-gradient(135deg, #667eea, #764ba2, #f093fb, #667eea);
-      background-size: 300% 300%;
-      animation: gradient-shift 6s ease infinite;
+      /* removed — was causing compositor overhead */
     }
 
     /* ── Responsive ── */
@@ -214,7 +252,11 @@
 
   <!-- ── Hero ── -->
   <header class="hero">
-    <img src="logo.svg" alt="tightset" width="160" height="160" style="margin-bottom: 1rem;">
+    <div class="hero-typer">
+      <canvas id="heroCanvas"></canvas>
+      <span class="typer-cursor" id="typerCursor"></span>
+    </div>
+    <canvas id="titleCanvas" style="display:block; width:120px; height:120px; margin:0 auto 0.75rem;"></canvas>
     <p>Variable-weight text fitting engine. Fill any rectangle with kinetic typography.</p>
     <div class="hero-links">
       <a href="https://github.com/dmoptimal/tightset" class="btn-primary">GitHub</a>
@@ -284,7 +326,6 @@
     </div>
 
     <!-- Resizable live demos -->
-    <p style="font-size: 0.8rem; color: #444; margin-bottom: 0.75rem;">Drag to resize — try common sizes like <strong style="color:#666">1200 × 630</strong> (OG image), <strong style="color:#666">1080 × 1080</strong> (Instagram), or <strong style="color:#666">1920 × 1080</strong> (presentation slide).</p>
     <div class="resize-wrapper">
       <div class="resize-box" id="resizeBox">
         <canvas id="resizeCanvas"></canvas>
@@ -301,15 +342,7 @@
     <div class="dom-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
       <div class="card">
         <div class="dom-demo" id="domTarget" style="padding: 1.5rem;"></div>
-        <div class="card-label">renderToDOM() — plain text</div>
-      </div>
-      <div class="card">
-        <div class="dom-demo animated-gradient" id="domGradient" style="padding: 1.5rem;"></div>
-        <div class="card-label">animated gradient + drop-shadow</div>
-      </div>
-      <div class="card">
-        <div class="dom-demo" id="domNeon" style="padding: 1.5rem;"></div>
-        <div class="card-label">text-shadow glow</div>
+        <div class="card-label">renderToDOM() — gradient text via CSS</div>
       </div>
     </div>
   </section>

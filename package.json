@@ -47,22 +47,25 @@
     "build": "tsup && mkdir -p dist/svelte dist/vue && cp src/svelte/Tightset.svelte dist/svelte/ && cp src/vue/Tightset.vue dist/vue/",
     "build:docs": "tsup --config docs/tsup.config.ts",
     "dev": "tsup --watch",
+    "test": "node --test test/engine.test.mjs",
+    "bench": "node test/bench.mjs",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
+    "@types/react": "^19.0.0",
+    "canvas": "^3.2.3",
+    "react": "^19.0.0",
+    "svelte": "^4.0.0",
     "tsup": "^8.4.0",
     "typescript": "^5.7.0",
-    "@types/react": "^19.0.0",
-    "react": "^19.0.0",
-    "vue": "^3.5.0",
-    "svelte": "^4.0.0"
+    "vue": "^3.5.0"
   },
   "peerDependencies": {
+    "@angular/core": ">=16",
     "react": ">=18",
     "svelte": ">=4",
-    "vue": ">=3",
-    "@angular/core": ">=16"
+    "vue": ">=3"
   },
   "peerDependenciesMeta": {
     "react": {
